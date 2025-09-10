@@ -339,6 +339,7 @@ pub fn run() {
             let html = move || icon.get(style.get());
             let transform = move || mirrored.get().then_some("scale(-1, 1)");
             let height = size.clone();
+            let color_attr = color.clone();
 
             view! {
                 <svg
@@ -346,7 +347,7 @@ pub fn run() {
                     width=move || size.get()
                     height=move || height.get()
                     fill=move || color.get()
-                    color=move || color.get()
+                    color=move || color_attr.get()
                     transform=transform
                     viewBox=concat!("0 0 ", #canvas_int, " ", #canvas_int)
                     inner_html=html

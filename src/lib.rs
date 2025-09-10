@@ -55,13 +55,14 @@ pub fn Icon(
     let html = move || icon.get(style.get());
     let transform = move || mirrored.get().then_some("scale(-1, 1)");
     let height = size.clone();
+    let color_attr = color.clone();
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
             width=move || size.get()
             height=move || height.get()
             fill=move || color.get()
-            color=move || color.get()
+            color=move || color_attr.get()
             transform=transform
             viewBox=concat!("0 0 ", 256i32, " ", 256i32)
             inner_html=html
