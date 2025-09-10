@@ -9,29 +9,22 @@ fn extract_categories(input: &str) -> (HashMap<String, Vec<String>>, BTreeMap<St
     let mut icon_categories: HashMap<String, Vec<String>> = HashMap::new();
     let mut categories_set: BTreeMap<String, ()> = BTreeMap::new();
 
-    let re = Regex::new(r#"(?m)^\s*name:\s*"(.+)",\n.*\n\s*categories:\s*\[([^]]+)\]"#).unwrap();
-
-    for cap in re.captures_iter(input) {
-        let name = cap[1].to_string();
-        let has_categories = cap[2]
-            .split(',')
-            .filter(|category| !category.trim().is_empty())
-            .map(|category| {
-                let value = category
-                    .trim()
-                    .split('.')
-                    .nth(1)
-                    .unwrap()
-                    .to_lowercase()
-                    .to_string();
-                categories_set.insert(value.clone(), ());
-                value
-            })
-            .collect::<Vec<String>>();
-
-        icon_categories.insert(name, has_categories);
+    let parsed: serde_json::Value = serde_json::from_str(input).unwrap();
+    if let serde_json::Value::Object(map) = parsed {
+        for (icon_name, data) in map {
+            if let Some(sets) = data.get("sets").and_then(|s| s.as_array()) {
+                let mut list = Vec::new();
+                for s in sets {
+                    if let Some(set_str) = s.as_str() {
+                        categories_set.insert(set_str.to_string(), ());
+                        list.push(set_str.to_string());
+                    }
+                }
+                icon_categories.insert(icon_name, list);
+            }
+        }
     }
-    // Insert the Uncategorized category for icons that are not in the TS export file
+
     categories_set.insert("uncategorized".to_string(), ());
     (icon_categories, categories_set)
 }
@@ -56,6 +49,7 @@ exclude = ["/core"]
 
 [dependencies]
 leptos = "0.8"
+serde_json = "1"
 
 [workspace]
 members = ["xtask"]
@@ -85,20 +79,20 @@ default = ["all"]
 
 fn icon_template(
     icon_name: &str,
-    icon_weights: impl Iterator<Item = (String, String)>,
+    icon_styles: impl Iterator<Item = (String, String)>,
 ) -> TokenStream {
     let component_ident = format_ident!("{}", icon_name.to_case(Case::UpperSnake));
-    let weights = icon_weights.map(|w| w.1);
+    let styles = icon_styles.map(|s| s.1);
 
     quote! {
         //! GENERATED FILE
-        pub const #component_ident: &crate::IconWeightData = &crate::IconWeightData([#(#weights),*]);
+        pub const #component_ident: &crate::IconStyleData = &crate::IconStyleData([#(#styles),*]);
     }
 }
 
 const OUTPUT_DIR: &str = "src/icons";
-const ASSETS_DIR: &str = "core/assets";
-const TYPESCRIPT_EXPORT_FILE: &str = "core/src/icons.ts";
+const ASSETS_DIR: &str = "assets";
+const TYPESCRIPT_EXPORT_FILE: &str = "metadata/icons.json";
 
 pub fn run() {
     let svg_tag_regex = Regex::new(r"<svg.*?>").unwrap();
@@ -115,28 +109,32 @@ pub fn run() {
     fs::write("src/lib.rs", "").unwrap();
     fs::create_dir(OUTPUT_DIR).unwrap();
 
-    // Get a list of all the icon weights
-    let mut weights: Vec<_> = fs::read_dir(ASSETS_DIR)
+    // Get a list of all the icon styles
+    let mut styles: Vec<_> = fs::read_dir(ASSETS_DIR)
         .unwrap()
         .map(|entry| entry.unwrap().file_name().into_string().unwrap())
         .collect();
 
-    // Sort the weights so their ordering is stable.
-    weights.sort_unstable();
+    // Sort the styles so their ordering is stable.
+    styles.sort_unstable();
 
-    let regular_icons = fs::read_dir(format!("{ASSETS_DIR}/regular")).unwrap();
-
-    let mut file_names: Vec<_> = regular_icons
-        .into_iter()
-        .filter_map(|e| {
-            let entry = e.unwrap();
-            if entry.path().is_file() {
-                Some(entry.file_name().into_string().unwrap())
-            } else {
-                None
+    // Collect the canonical icon list from all style folders
+    let mut file_names_set = std::collections::BTreeSet::new();
+    for s in &styles {
+        if let Ok(dir) = fs::read_dir(format!("{ASSETS_DIR}/{s}")) {
+            for entry in dir.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                        if name.ends_with(".svg") {
+                            file_names_set.insert(name.to_string());
+                        }
+                    }
+                }
             }
-        })
-        .collect();
+        }
+    }
+    let mut file_names: Vec<_> = file_names_set.into_iter().collect();
 
     // We'll also sort the file names so each generation run has a
     // stable order. This should improve `src/mod.rs` diffs.
@@ -150,19 +148,16 @@ pub fn run() {
         //If we haven't been able to match the icon's category, assign in to 'Uncategorized'
         let features = icon_categories.get(&icon_name).unwrap_or(&uncategorized);
 
-        let icon_weights = weights.iter().map(|weight| {
-            let file_name = if weight == "regular" {
-                format!("{icon_name}.svg")
-            } else {
-                format!("{icon_name}-{weight}.svg")
-            };
-            let svg = fs::read_to_string(format!("{ASSETS_DIR}/{weight}/{file_name}")).unwrap();
+        let icon_styles = styles.iter().map(|style| {
+            let file_name = file_name.clone();
+            let path = format!("{ASSETS_DIR}/{style}/{file_name}");
+            let svg = fs::read_to_string(&path).unwrap_or_default();
             let svg = svg_tag_regex.replace(&svg, "");
             let svg = svg_closing_tag_regex.replace(&svg, "");
-            (weight.to_string(), svg.to_string())
+            (style.to_string(), svg.to_string())
         });
 
-        let file = icon_template(&icon_name, icon_weights);
+        let file = icon_template(&icon_name, icon_styles);
 
         fs::write(
             format!("{OUTPUT_DIR}/{}.rs", icon_name.to_case(Case::Snake)),
@@ -198,15 +193,20 @@ pub fn run() {
     let module = quote! { #(#mod_content)* }.to_string();
     fs::write(format!("{OUTPUT_DIR}/mod.rs"), module).unwrap();
 
-    let weight_variants: Vec<_> = weights
+    let style_variants: Vec<_> = styles
         .iter()
-        .map(|w| format_ident!("{}", w.to_case(Case::UpperCamel)))
+        .map(|s| format_ident!("{}", s.to_case(Case::UpperCamel)))
         .collect();
 
-    let weight_len = weight_variants.len();
-    let weight_indeces = weight_variants.iter().enumerate().map(|(i, v)| {
-        quote! { IconWeight::#v => self.0[#i] }
+    let style_len = style_variants.len();
+    let style_indices = style_variants.iter().enumerate().map(|(i, v)| {
+        quote! { IconStyle::#v => self.0[#i] }
     });
+
+    let default_variant = style_variants
+        .get(0)
+        .cloned()
+        .unwrap_or_else(|| format_ident!("Regular"));
 
     let lib = quote! {
         //! Phosphor is a flexible icon family for interfaces, diagrams,
@@ -215,14 +215,14 @@ pub fn run() {
         //!
         //! ```
         //! use leptos::prelude::*;
-        //! use phosphor_leptos::{Icon, IconWeight, HORSE, HEART, CUBE};
+        //! use phosphor_leptos::{Icon, IconStyle, HORSE, HEART, CUBE};
         //!
         //! #[component]
         //! fn MyComponent() -> impl IntoView {
         //!     view! {
         //!         <Icon icon=HORSE />
-        //!         <Icon icon=HEART color="#AE2983" weight=IconWeight::Fill size="32px" />
-        //!         <Icon icon=CUBE color="teal" weight=IconWeight::Duotone />
+        //!         <Icon icon=HEART color="#AE2983" style=IconStyle::Fill size="32px" />
+        //!         <Icon icon=CUBE color="teal" style=IconStyle::Duotone />
         //!     }
         //! }
         //! ```
@@ -231,95 +231,35 @@ pub fn run() {
         mod icons;
         pub use icons::*;
 
-        /// An icon's weight or style.
+        /// An icon's style.
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        pub enum IconWeight {
-            #(#weight_variants),*
+        pub enum IconStyle {
+            #(#style_variants),*
         }
 
-        /// The SVG path data for all weights of a particular icon.
+        /// The SVG path data for all styles of a particular icon.
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        pub struct IconWeightData([&'static str; #weight_len]);
+        pub struct IconStyleData([&'static str; #style_len]);
 
-        impl IconWeightData {
-            /// Retrieve the SVG paths for the given weight.
-            ///
-            /// The returned string slice contains raw path elements.
-            /// To render them manually, you'll need to provide them to
-            /// an SVG component's `inner_html` property.
-            ///
-            /// ```
-            /// # use leptos::prelude::*;
-            /// # #[component]
-            /// # fn MyComponent() -> impl IntoView {
-            /// use phosphor_leptos::{ACORN, IconWeight};
-            ///
-            /// let raw_html = ACORN.get(IconWeight::Regular);
-            /// view! {
-            ///     <svg inner_html=raw_html />
-            /// }
-            /// # }
-            /// ```
-            pub fn get(&self, weight: IconWeight) -> &'static str {
-                match weight {
-                    #(#weight_indeces),*
+        impl IconStyleData {
+            pub fn get(&self, style: IconStyle) -> &'static str {
+                match style {
+                    #(#style_indices),*
                 }
             }
         }
 
-        /// A convenient alias for passing around references to [IconWeightData].
-        ///
-        /// While [IconWeightData] is `Copy`, it's not particularly beneficial to pass
-        /// all those bytes around (48 bytes on WASM, 96 bytes on 64 bit systems).
-        pub type IconData = &'static IconWeightData;
+        pub type IconData = &'static IconStyleData;
 
-        /// A thin wrapper around `<svg />` for displaying Phosphor icons.
-        ///
-        /// ```
-        /// use leptos::prelude::*;
-        /// use phosphor_leptos::{Icon, IconWeight, HORSE, HEART, CUBE};
-        ///
-        /// #[component]
-        /// fn MyComponent() -> impl IntoView {
-        ///     view! {
-        ///         <Icon icon=HORSE />
-        ///         <Icon icon=HEART color="#AE2983" weight=IconWeight::Fill size="32px" />
-        ///         <Icon icon=CUBE color="teal" weight=IconWeight::Duotone />
-        ///     }
-        /// }
-        /// ```
         #[component]
         pub fn Icon(
-            /// The icon data to display.
             icon: IconData,
-
-            /// Icon weight/style. This can also be used, for example, to "toggle" an icon's state:
-            /// a rating component could use Stars with [IconWeight::Regular] to denote an empty star,
-            /// and [IconWeight::Fill] to denote a filled star.
-            #[prop(into, default = Signal::stored(IconWeight::Regular))] weight: Signal<
-                IconWeight,
-            >,
-
-            /// Icon height & width. As with standard React elements,
-            /// this can be a number, or a string with units in
-            /// `px`, `%`, `em`, `rem`, `pt`, `cm`, `mm`, `in`.
+            #[prop(into, default = Signal::stored(IconStyle::#default_variant))] style: Signal<IconStyle>,
             #[prop(into, default = TextProp::from("1em"))] size: TextProp,
-
-            /// Icon stroke/fill color.
-            ///
-            /// This can be any CSS color string, including
-            /// `hex`, `rgb`, `rgba`, `hsl`, `hsla`, named colors,
-            /// or the special `currentColor` variable.
-            ///
             #[prop(into, default = TextProp::from("currentColor"))] color: TextProp,
-
-            /// Flip the icon horizontally.
-            ///
-            /// This can be useful in RTL languages where normal
-            /// icon orientation is not appropriate.
             #[prop(into, default = Signal::stored(false))] mirrored: Signal<bool>,
         ) -> impl IntoView {
-            let html = move || icon.get(weight.get());
+            let html = move || icon.get(style.get());
             let transform = move || mirrored.get().then_some("scale(-1, 1)");
             let height = size.clone();
 

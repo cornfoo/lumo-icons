@@ -4,112 +4,55 @@
 #![doc = r""]
 #![doc = r" ```"]
 #![doc = r" use leptos::prelude::*;"]
-#![doc = r" use phosphor_leptos::{Icon, IconWeight, HORSE, HEART, CUBE};"]
+#![doc = r" use phosphor_leptos::{Icon, IconStyle, HORSE, HEART, CUBE};"]
 #![doc = r""]
 #![doc = r" #[component]"]
 #![doc = r" fn MyComponent() -> impl IntoView {"]
 #![doc = r"     view! {"]
 #![doc = r"         <Icon icon=HORSE />"]
-#![doc = r##"         <Icon icon=HEART color="#AE2983" weight=IconWeight::Fill size="32px" />"##]
-#![doc = r#"         <Icon icon=CUBE color="teal" weight=IconWeight::Duotone />"#]
+#![doc = r##"         <Icon icon=HEART color="#AE2983" style=IconStyle::Fill size="32px" />"##]
+#![doc = r#"         <Icon icon=CUBE color="teal" style=IconStyle::Duotone />"#]
 #![doc = r"     }"]
 #![doc = r" }"]
 #![doc = r" ```"]
 use leptos::{prelude::*, text_prop::TextProp};
 mod icons;
 pub use icons::*;
-#[doc = r" An icon's weight or style."]
+#[doc = r" An icon's style."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IconWeight {
-    Bold,
-    Duotone,
-    Fill,
-    Light,
-    Regular,
-    Thin,
+pub enum IconStyle {
+    Core,
+    Flags,
+    Glass,
+    MicroBold,
+    SocialMedia,
+    Ui,
 }
-#[doc = r" The SVG path data for all weights of a particular icon."]
+#[doc = r" The SVG path data for all styles of a particular icon."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct IconWeightData([&'static str; 6usize]);
-impl IconWeightData {
-    #[doc = r" Retrieve the SVG paths for the given weight."]
-    #[doc = r""]
-    #[doc = r" The returned string slice contains raw path elements."]
-    #[doc = r" To render them manually, you'll need to provide them to"]
-    #[doc = r" an SVG component's `inner_html` property."]
-    #[doc = r""]
-    #[doc = r" ```"]
-    #[doc = r" # use leptos::prelude::*;"]
-    #[doc = r" # #[component]"]
-    #[doc = r" # fn MyComponent() -> impl IntoView {"]
-    #[doc = r" use phosphor_leptos::{ACORN, IconWeight};"]
-    #[doc = r""]
-    #[doc = r" let raw_html = ACORN.get(IconWeight::Regular);"]
-    #[doc = r" view! {"]
-    #[doc = r"     <svg inner_html=raw_html />"]
-    #[doc = r" }"]
-    #[doc = r" # }"]
-    #[doc = r" ```"]
-    pub fn get(&self, weight: IconWeight) -> &'static str {
-        match weight {
-            IconWeight::Bold => self.0[0usize],
-            IconWeight::Duotone => self.0[1usize],
-            IconWeight::Fill => self.0[2usize],
-            IconWeight::Light => self.0[3usize],
-            IconWeight::Regular => self.0[4usize],
-            IconWeight::Thin => self.0[5usize],
+pub struct IconStyleData([&'static str; 6usize]);
+impl IconStyleData {
+    pub fn get(&self, style: IconStyle) -> &'static str {
+        match style {
+            IconStyle::Core => self.0[0usize],
+            IconStyle::Flags => self.0[1usize],
+            IconStyle::Glass => self.0[2usize],
+            IconStyle::MicroBold => self.0[3usize],
+            IconStyle::SocialMedia => self.0[4usize],
+            IconStyle::Ui => self.0[5usize],
         }
     }
 }
-#[doc = r" A convenient alias for passing around references to [IconWeightData]."]
-#[doc = r""]
-#[doc = r" While [IconWeightData] is `Copy`, it's not particularly beneficial to pass"]
-#[doc = r" all those bytes around (48 bytes on WASM, 96 bytes on 64 bit systems)."]
-pub type IconData = &'static IconWeightData;
-#[doc = r" A thin wrapper around `<svg />` for displaying Phosphor icons."]
-#[doc = r""]
-#[doc = r" ```"]
-#[doc = r" use leptos::prelude::*;"]
-#[doc = r" use phosphor_leptos::{Icon, IconWeight, HORSE, HEART, CUBE};"]
-#[doc = r""]
-#[doc = r" #[component]"]
-#[doc = r" fn MyComponent() -> impl IntoView {"]
-#[doc = r"     view! {"]
-#[doc = r"         <Icon icon=HORSE />"]
-#[doc = r##"         <Icon icon=HEART color="#AE2983" weight=IconWeight::Fill size="32px" />"##]
-#[doc = r#"         <Icon icon=CUBE color="teal" weight=IconWeight::Duotone />"#]
-#[doc = r"     }"]
-#[doc = r" }"]
-#[doc = r" ```"]
+pub type IconData = &'static IconStyleData;
 #[component]
 pub fn Icon(
-    #[doc = r" The icon data to display."] icon: IconData,
-    #[doc = r#" Icon weight/style. This can also be used, for example, to "toggle" an icon's state:"#]
-    #[doc = r" a rating component could use Stars with [IconWeight::Regular] to denote an empty star,"]
-    #[doc = r" and [IconWeight::Fill] to denote a filled star."]
-    # [prop (into , default = Signal :: stored (IconWeight :: Regular))]
-    weight: Signal<IconWeight>,
-    #[doc = r" Icon height & width. As with standard React elements,"]
-    #[doc = r" this can be a number, or a string with units in"]
-    #[doc = r" `px`, `%`, `em`, `rem`, `pt`, `cm`, `mm`, `in`."]
-    # [prop (into , default = TextProp :: from ("1em"))]
-    size: TextProp,
-    #[doc = r" Icon stroke/fill color."]
-    #[doc = r""]
-    #[doc = r" This can be any CSS color string, including"]
-    #[doc = r" `hex`, `rgb`, `rgba`, `hsl`, `hsla`, named colors,"]
-    #[doc = r" or the special `currentColor` variable."]
-    #[doc = r""]
-    # [prop (into , default = TextProp :: from ("currentColor"))]
-    color: TextProp,
-    #[doc = r" Flip the icon horizontally."]
-    #[doc = r""]
-    #[doc = r" This can be useful in RTL languages where normal"]
-    #[doc = r" icon orientation is not appropriate."]
-    # [prop (into , default = Signal :: stored (false))]
-    mirrored: Signal<bool>,
+    icon: IconData,
+    # [prop (into , default = Signal :: stored (IconStyle :: Core))] style: Signal<IconStyle>,
+    # [prop (into , default = TextProp :: from ("1em"))] size: TextProp,
+    # [prop (into , default = TextProp :: from ("currentColor"))] color: TextProp,
+    # [prop (into , default = Signal :: stored (false))] mirrored: Signal<bool>,
 ) -> impl IntoView {
-    let html = move || icon.get(weight.get());
+    let html = move || icon.get(style.get());
     let transform = move || mirrored.get().then_some("scale(-1, 1)");
     let height = size.clone();
     view! {

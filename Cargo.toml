@@ -17,6 +17,7 @@ exclude = ["/core"]
 
 [dependencies]
 leptos = "0.8"
+serde_json = "1"
 
 [workspace]
 members = ["xtask"]
@@ -24,42 +25,14 @@ members = ["xtask"]
 [features]
 default = ["all"]
 all = [
-	"arrows",
-	"brand",
-	"commerce",
-	"communication",
-	"design",
-	"development",
-	"editor",
-	"finance",
-	"games",
-	"health",
-	"map",
-	"media",
-	"nature",
-	"objects",
-	"office",
-	"people",
-	"system",
-	"uncategorized",
-	"weather"
+	"core",
+	"flags",
+	"micro-bold",
+	"ui",
+	"uncategorized"
 ]
-arrows = []
-brand = []
-commerce = []
-communication = []
-design = []
-development = []
-editor = []
-finance = []
-games = []
-health = []
-map = []
-media = []
-nature = []
-objects = []
-office = []
-people = []
-system = []
+core = []
+flags = []
+micro-bold = []
+ui = []
 uncategorized = []
-weather = []
