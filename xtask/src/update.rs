@@ -94,10 +94,66 @@ const OUTPUT_DIR: &str = "src/icons";
 const ASSETS_DIR: &str = "assets";
 const TYPESCRIPT_EXPORT_FILE: &str = "metadata/icons.json";
 
-pub fn run() {
-    let svg_tag_regex = Regex::new(r"<svg.*?>").unwrap();
-    let svg_closing_tag_regex = Regex::new(r"</svg>").unwrap();
+// Critical: normalize any non-native viewBox content to a common canvas so icons render at the correct scale.
+fn parse_viewbox(raw: &str) -> Option<(f32, f32)> {
+    let re = Regex::new(r#"(?i)viewBox\s*=\s*"[^"]*?0\s+0\s+([0-9.]+)\s+([0-9.]+)""#).unwrap();
+    re.captures(raw).map(|c| {
+        let w = c[1].parse::<f32>().unwrap_or(256.0);
+        let h = c[2].parse::<f32>().unwrap_or(256.0);
+        (w, h)
+    })
+}
 
+fn strip_svg_outer(raw: &str) -> String {
+    let svg_open = Regex::new(r"(?is)<svg[^>]*>").unwrap();
+    let svg_close = Regex::new(r"(?is)</svg>").unwrap();
+    svg_close
+        .replace(&svg_open.replace(raw, ""), "")
+        .to_string()
+}
+
+fn normalize_colors_to_current(inner: &str) -> String {
+    let fill_attr = Regex::new(r#"(?i)fill\s*=\s*"([^"]+)""#).unwrap();
+    let s = fill_attr.replace_all(inner, |caps: &regex::Captures| {
+        let v = &caps[1];
+        if v.eq_ignore_ascii_case("none") || v.eq_ignore_ascii_case("currentcolor") {
+            caps[0].to_string()
+        } else {
+            r#"fill="currentColor""#.to_string()
+        }
+    });
+    let stroke_attr = Regex::new(r#"(?i)stroke\s*=\s*"([^"]+)""#).unwrap();
+    let s = stroke_attr.replace_all(&s, |caps: &regex::Captures| {
+        let v = &caps[1];
+        if v.eq_ignore_ascii_case("none") || v.eq_ignore_ascii_case("currentcolor") {
+            caps[0].to_string()
+        } else {
+            r#"stroke="currentColor""#.to_string()
+        }
+    });
+    s.to_string()
+}
+
+fn normalize_svg(raw: &str, target_canvas: f32) -> String {
+    let (vw, vh) = parse_viewbox(raw).unwrap_or((target_canvas, target_canvas));
+    let src_max = vw.max(vh);
+    let scale = if (src_max - 0.0).abs() < f32::EPSILON {
+        1.0
+    } else {
+        target_canvas / src_max
+    };
+
+    let inner = strip_svg_outer(raw);
+    let inner = normalize_colors_to_current(&inner);
+
+    if (scale - 1.0).abs() > f32::EPSILON {
+        format!(r#"<g transform="scale({scale})">{inner}</g>"#)
+    } else {
+        inner
+    }
+}
+
+pub fn run() {
     // Extract the categories from the typescript export file
     let (icon_categories, categories_set) =
         extract_categories(fs::read_to_string(TYPESCRIPT_EXPORT_FILE).unwrap().as_str());
@@ -140,6 +196,26 @@ pub fn run() {
     // stable order. This should improve `src/mod.rs` diffs.
     file_names.sort_unstable();
 
+    // Determine a dynamic canvas from the largest source viewBox across all icons.
+    let mut canvas: f32 = 256.0;
+    for s in &styles {
+        if let Ok(dir) = fs::read_dir(format!("{ASSETS_DIR}/{s}")) {
+            for entry in dir.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Ok(raw) = fs::read_to_string(&path) {
+                        if let Some((w, h)) = parse_viewbox(&raw) {
+                            let m = w.max(h);
+                            if m > canvas {
+                                canvas = m;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let mut mod_content = Vec::new();
     for file_name in file_names {
         let icon_name = file_name.strip_suffix(".svg").unwrap().to_string();
@@ -151,10 +227,9 @@ pub fn run() {
         let icon_styles = styles.iter().map(|style| {
             let file_name = file_name.clone();
             let path = format!("{ASSETS_DIR}/{style}/{file_name}");
-            let svg = fs::read_to_string(&path).unwrap_or_default();
-            let svg = svg_tag_regex.replace(&svg, "");
-            let svg = svg_closing_tag_regex.replace(&svg, "");
-            (style.to_string(), svg.to_string())
+            let svg_raw = fs::read_to_string(&path).unwrap_or_default();
+            let svg = normalize_svg(&svg_raw, canvas);
+            (style.to_string(), svg)
         });
 
         let file = icon_template(&icon_name, icon_styles);
@@ -207,6 +282,8 @@ pub fn run() {
         .get(0)
         .cloned()
         .unwrap_or_else(|| format_ident!("Regular"));
+
+    let canvas_int = canvas as i32;
 
     let lib = quote! {
         //! Phosphor is a flexible icon family for interfaces, diagrams,
@@ -269,8 +346,9 @@ pub fn run() {
                     width=move || size.get()
                     height=move || height.get()
                     fill=move || color.get()
+                    color=move || color.get()
                     transform=transform
-                    viewBox="0 0 256 256"
+                    viewBox=concat!("0 0 ", #canvas_int, " ", #canvas_int)
                     inner_html=html
                 />
             }

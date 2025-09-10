@@ -61,8 +61,9 @@ pub fn Icon(
             width=move || size.get()
             height=move || height.get()
             fill=move || color.get()
+            color=move || color.get()
             transform=transform
-            viewBox="0 0 256 256"
+            viewBox=concat!("0 0 ", 256i32, " ", 256i32)
             inner_html=html
         />
     }
