@@ -48,7 +48,7 @@ exclude = ["/core"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-leptos = "0.8"
+leptos = { version = "0.7.8", features = ["csr", "nightly"] }
 serde_json = "1"
 
 [workspace]
