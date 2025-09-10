@@ -2,13 +2,13 @@
 # Edit xtask/src/update.rs to maintain this file
 
 [package]
-name = "phosphor-leptos"
+name = "lumo-icons"
 version = "0.8.0"
-description = "phosphor icons for leptos"
-authors = ["Søren H. Hansen"]
+description = "Lumo icons for leptos"
+authors = ["James <lumo.trade>"]
 readme = "README.md"
-repository = "https://github.com/SorenHolstHansen/phosphor-leptos"
-keywords = ["icons", "leptos", "phosphor"]
+repository = "https://github.com/cornfoo/lumo-icons"
+keywords = ["icons", "leptos", "lumo"]
 edition = "2021"
 license = "MIT"
 exclude = ["/core"]
