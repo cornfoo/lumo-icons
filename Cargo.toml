@@ -25,12 +25,14 @@ members = ["xtask"]
 [features]
 default = ["all"]
 all = [
+	"business-finance",
 	"core",
 	"flags",
 	"micro-bold",
 	"ui",
 	"uncategorized"
 ]
+business-finance = []
 core = []
 flags = []
 micro-bold = []

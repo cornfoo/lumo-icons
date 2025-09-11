@@ -11,6 +11,18 @@
     "published_in": 1.0,
     "updated_in": 1.0
   },
+  "clipboard-list": {
+    "name": "clipboard-list",
+    "pascal_name": "ClipboardList",
+    "sets": ["core", "ui", "business-finance"],
+    "styles": ["ui"],
+    "weight": "regular",
+    "categories": ["ui", "business", "productivity"],
+    "tags": ["list", "note", "paper", "clipboard", "task"],
+    "codepoint": 71003,
+    "published_in": 1.0,
+    "updated_in": 1.0
+  },
   "external-link": {
     "name": "external-link",
     "pascal_name": "ExternalLink",
