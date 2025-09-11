@@ -51,6 +51,7 @@ pub fn Icon(
     # [prop (into , default = TextProp :: from ("1em"))] size: TextProp,
     # [prop (into , default = TextProp :: from ("currentColor"))] color: TextProp,
     # [prop (into , default = Signal :: stored (false))] mirrored: Signal<bool>,
+    #[prop(optional)] label: Option<&'static str>,
 ) -> impl IntoView {
     let html = move || icon.get(style.get());
     let transform = move || mirrored.get().then_some("scale(-1, 1)");
@@ -59,13 +60,17 @@ pub fn Icon(
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            aria-label=label.unwrap_or("")
             width=move || size.get()
             height=move || height.get()
             fill=move || color.get()
             color=move || color_attr.get()
             transform=transform
             viewBox=concat!("0 0 ", 256i32, " ", 256i32)
-            inner_html=html
-        />
+        >
+            {label.map(|l| view! { <title>{l}</title> })}
+            {move || html()}
+        </svg>
     }
 }
