@@ -1,7 +1,7 @@
 {
-  "copy": {
-    "name": "copy",
-    "pascal_name": "Copy",
+  "copy-bold": {
+    "name": "copy-bold",
+    "pascal_name": "CopyBold",
     "sets": ["ui", "micro-bold"],
     "styles": ["micro-bold"],
     "weight": "bold",
@@ -23,15 +23,39 @@
     "published_in": 1.0,
     "updated_in": 1.0
   },
-  "external-link": {
-    "name": "external-link",
-    "pascal_name": "ExternalLink",
+  "external-link-bold": {
+    "name": "external-link-bold",
+    "pascal_name": "ExternalLinkBold",
     "sets": ["core", "flags", "micro-bold"],
     "styles": ["micro-bold"],
     "weight": "bold",
     "categories": ["navigation", "ui"],
     "tags": ["open", "external", "outbound", "launch", "new-window"],
     "codepoint": 71002,
+    "published_in": 1.0,
+    "updated_in": 1.0
+  },
+  "gem-fill": {
+    "name": "gem-fill",
+    "pascal_name": "GemFill",
+    "sets": ["ui", "micro-bold"],
+    "styles": ["micro-bold"],
+    "weight": "bold",
+    "categories": ["fashion", "beauty", "ui"],
+    "tags": ["diamond", "gem", "stone", "jewelry", "premium"],
+    "codepoint": 71004,
+    "published_in": 1.0,
+    "updated_in": 1.0
+  },
+  "square-bars-fill": {
+    "name": "square-bars-fill",
+    "pascal_name": "SquareBarsFill",
+    "sets": ["ui", "micro-bold"],
+    "styles": ["micro-bold"],
+    "weight": "bold",
+    "categories": ["ui", "layout"],
+    "tags": ["lines", "list", "settings", "menu", "square", "navigation", "bars"],
+    "codepoint": 71005,
     "published_in": 1.0,
     "updated_in": 1.0
   }
