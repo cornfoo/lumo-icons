@@ -335,31 +335,23 @@ pub fn run() {
             #[prop(into, default = TextProp::from("1em"))] size: TextProp,
             #[prop(into, default = TextProp::from("currentColor"))] color: TextProp,
             #[prop(into, default = Signal::stored(false))] mirrored: Signal<bool>,
-            #[prop(optional)] label: Option<&'static str>,
         ) -> impl IntoView {
             let html = move || icon.get(style.get());
             let transform = move || mirrored.get().then_some("scale(-1, 1)");
             let height = size.clone();
             let color_attr = color.clone();
 
-            // Only set aria-label when provided; otherwise omit it so <title> can name the SVG.
-            let label_owned = label.map(|s| s.to_string());
-
             view! {
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    role="img"
-                    aria-label=move || label_owned.clone()
                     width=move || size.get()
                     height=move || height.get()
                     fill=move || color.get()
                     color=move || color_attr.get()
                     transform=transform
                     viewBox=concat!("0 0 ", #canvas_int, " ", #canvas_int)
-                >
-                    { move || label_owned.clone().map(|l| view! { <title>{ l }</title> }) }
-                    <g inner_html=html />
-                </svg>
+                    inner_html=html
+                />
             }
         }
     };
