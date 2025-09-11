@@ -57,11 +57,12 @@ pub fn Icon(
     let transform = move || mirrored.get().then_some("scale(-1, 1)");
     let height = size.clone();
     let color_attr = color.clone();
+    let label_owned = label.map(|s| s.to_string());
     view! {
         <svg
             xmlns="http://www.w3.org/2000/svg"
             role="img"
-            aria-label=label.unwrap_or("")
+            aria-label=move || label_owned.clone()
             width=move || size.get()
             height=move || height.get()
             fill=move || color.get()
@@ -69,8 +70,8 @@ pub fn Icon(
             transform=transform
             viewBox=concat!("0 0 ", 256i32, " ", 256i32)
         >
-            {label.map(|l| view! { <title>{l}</title> })}
-            {move || html()}
+            {move || label_owned.clone().map(|l| view! { <title>{l}</title> })}
+            <g inner_html=html />
         </svg>
     }
 }
