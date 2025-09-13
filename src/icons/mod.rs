@@ -24,6 +24,12 @@ mod gem_fill;
 pub use gem_fill::*;
 #[cfg(any(feature = "ui", feature = "micro-bold"))]
 #[doc(hidden)]
+mod hand_fill;
+#[cfg(any(feature = "ui", feature = "micro-bold"))]
+#[doc(hidden)]
+pub use hand_fill::*;
+#[cfg(any(feature = "ui", feature = "micro-bold"))]
+#[doc(hidden)]
 mod square_bars_fill;
 #[cfg(any(feature = "ui", feature = "micro-bold"))]
 #[doc(hidden)]

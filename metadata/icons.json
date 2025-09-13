@@ -47,6 +47,18 @@
     "published_in": 1.0,
     "updated_in": 1.0
   },
+  "hand-fill": {
+    "name": "hand-fill",
+    "pascal_name": "HandFill",
+    "sets": ["ui", "micro-bold"],
+    "styles": ["micro-bold"],
+    "weight": "bold",
+    "categories": ["ui", "gestures"],
+    "tags": ["hand", "gesture", "stop", "open", "sign"],
+    "codepoint": 71006,
+    "published_in": 1.0,
+    "updated_in": 1.0
+  },
   "square-bars-fill": {
     "name": "square-bars-fill",
     "pascal_name": "SquareBarsFill",
